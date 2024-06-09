@@ -1,3 +1,9 @@
+To build on windows 
+install go releaser go install github.com/goreleaser/goreleaser/v2@latest
+goreleaser release --snapshot --clean
+install innosetup
+open setup.iss to generate the installer
+
 <h3 align="center">
   <br />
   <img src="https://user-images.githubusercontent.com/168240/52895983-7330f100-3176-11e9-855c-246eaabd3adc.png" alt="logo" width="600" />
