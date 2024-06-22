@@ -2,5 +2,6 @@ builds:
   - main: ./cmd/ipdr/ipdr.go
     goos:
       - windows
+      - linux
     goarch:
       - amd64

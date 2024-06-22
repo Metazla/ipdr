@@ -1,9 +1,3 @@
-To build on windows 
-install go releaser go install github.com/goreleaser/goreleaser/v2@latest
-goreleaser release --snapshot --clean
-install innosetup
-open setup.iss to generate the installer
-
 <h3 align="center">
   <br />
   <img src="https://user-images.githubusercontent.com/168240/52895983-7330f100-3176-11e9-855c-246eaabd3adc.png" alt="logo" width="600" />
@@ -35,25 +29,56 @@ High-level overview:
 
 ## Contents
 
-- [Install](#install)
 - [Getting started](#getting-started)
 - [CLI](#cli)
-- [Test](#test)
 - [FAQ](#faq)
 - [Contributing](#contributing)
 - [Resources](#resources)
 - [License](#license)
 
-## Install
+## Getting started
 
-- Install with [Go](https://golang.org/doc/install):
+There is 2 ways of using IPDR
+- [using the local registry](#ipdr-regitry-container)
+- [using the IPDR client with an IPFS node](#ipdr-regitry-container)
 
-    ```bash
-    go get -u github.com/ipdr/ipdr/cmd/ipdr
-    ```
+## IPDR regitry container
+The registry is composed of an IPFS node and the IPDR registry
 
-- Install from [release binaries](https://github.com/ipdr/ipdr/releases):
+1 - download the latest docker image 
+option 1 download image from github
+option 2 from ipfs directly and rename it with .tar
+ipfshash and image download in https://github.com/worph/ipdr/releases
 
+2 - start the registry
+```bash
+docker load --input file.tar
+docker run -d -p 5000:5000 ipdr-server:latest
+```
+
+3 - use the registry
+
+```bash
+# run the ipdr registry
+docker build -t example/helloworld .
+
+# push to IPFS (it will return the hash of the command)
+ipdr push example/helloworld
+
+# pull from IPFS
+docker pull localhost:5000/bafybeihbc47tfnglajwmjvhnh6msqdolvfzyxrrgdcjuuhv4lqai2apvv4
+
+# run image pulled from IPFS
+docker run localhost:5000/bafybeihbc47tfnglajwmjvhnh6msqdolvfzyxrrgdcjuuhv4lqai2apvv4
+```
+
+
+## IPDR client Install (Optional)
+
+If you don't want to use the registry and use the IPDR client directly with IPFS desktop you can intall the client
+
+### linux
+- Install from [release binaries](https://github.com/worph/ipdr/releases)
     ```bash
     # replace x.x.x with the latest version
     wget https://github.com/ipdr/ipdr/releases/download/x.x.x/ipdr_x.x.x_linux_amd64.tar.gz
@@ -63,49 +88,44 @@ High-level overview:
     # move to bin path
     sudo mv ipdr /usr/local/bin/ipdr
     ```
-
-## Getting started
-
-### Prerequisites
-
-- Start IPFS daemon ([Install instructions](https://docs.ipfs.io/introduction/install/)):
+### windows
 
     ```bash
-    $ ipfs daemon
-    Initializing daemon...
-    Swarm listening on /ip4/127.0.0.1/tcp/4001
-    Swarm listening on /ip4/192.168.86.90/tcp/4001
-    Swarm listening on /ip6/::1/tcp/4001
-    Swarm listening on /p2p-circuit/ipfs/QmR29wrbNv3WrMuodwuLiDwvskuZKKeTtcYDw7SwNffzCH
-    Swarm announcing /ip4/127.0.0.1/tcp/4001
-    Swarm announcing /ip4/192.168.0.21/tcp/43042
-    Swarm announcing /ip4/192.168.86.90/tcp/4001
-    Swarm announcing /ip6/::1/tcp/4001
-    API server listening on /ip4/0.0.0.0/tcp/5001
-    Gateway (readonly) server listening on /ip4/0.0.0.0/tcp/8080
-    Daemon is ready
+    Download the exe from https://github.com/worph/ipdr/releases
     ```
 
-- Add `docker.local` to `/etc/hosts`:
+### go
 
-    ```hosts
-    echo '127.0.0.1 docker.local' | sudo tee -a /etc/hosts
-    echo '::1       docker.local' | sudo tee -a /etc/hosts
+- Install with [Go](https://golang.org/doc/install):
+
+    ```bash
+    go get -u github.com/ipdr/ipdr/cmd/ipdr
     ```
 
-    - Flush local DNS cache:
+## CLI
 
-      - on macOS:
+```bash
+$ ipdr --help
 
-          ```bash
-          dscacheutil -flushcache; sudo killall -HUP mDNSResponder
-          ```
+The command-line interface for the InterPlanetary Docker Registry.
+More info: https://github.com/ipdr/ipdr
 
-      - on Ubuntu 18+:
+Usage:
+  ipdr [flags]
+  ipdr [command]
 
-          ```bash
-          sudo systemd-resolve --flush-caches
-          ```
+Available Commands:
+  convert     Convert a hash to IPFS format or Docker registry format
+  help        Help about any command
+  pull        Pull image from the IPFS-backed Docker registry
+  push        Push image to IPFS-backed Docker registry
+  server      Start IPFS-backed Docker registry server
+
+Flags:
+  -h, --help   help for ipdr
+
+Use "ipdr [command] --help" for more information about a command.
+```
 
 ### Example flow
 
@@ -214,47 +234,6 @@ High-level overview:
         hello world
         ```
 
-### TLDR; example
-
-```bash
-# build Docker image
-docker build -t example/helloworld .
-
-# push to IPFS
-IPFS_HASH="$(ipdr push example/helloworld --silent)"
-
-# pull from IPFS
-REPO_TAG=$(ipdr pull "$IPFS_HASH" --silent)
-
-# run image pulled from IPFS
-docker run "$REPO_TAG"
-```
-
-## CLI
-
-```bash
-$ ipdr --help
-
-The command-line interface for the InterPlanetary Docker Registry.
-More info: https://github.com/ipdr/ipdr
-
-Usage:
-  ipdr [flags]
-  ipdr [command]
-
-Available Commands:
-  convert     Convert a hash to IPFS format or Docker registry format
-  help        Help about any command
-  pull        Pull image from the IPFS-backed Docker registry
-  push        Push image to IPFS-backed Docker registry
-  server      Start IPFS-backed Docker registry server
-
-Flags:
-  -h, --help   help for ipdr
-
-Use "ipdr [command] --help" for more information about a command.
-```
-
 ## IPNS
 
 An example of using IPNS to resolve image tag names.
@@ -330,11 +309,15 @@ docker pull docker.local:5000/bafybeiakvswzlopeu573372p5xry47tkc2hhcg5q5rulmbfrn
 docker run docker.local:5000/bafybeiakvswzlopeu573372p5xry47tkc2hhcg5q5rulmbfrnkecrbnt3y
 ```
 
-## Test
+## Social
 
-```bash
-make test
-```
+- Discuss on [Discord](https://discord.gg/7GJwMjedjh)
+
+## Resources
+
+- [Docker Registry HTTP API V2 Spec](https://docs.docker.com/registry/spec/api/)
+- [Docker Registry 2.0 (slidedeck)](https://www.slideshare.net/Docker/docker-48351569)
+- [image2ipfs](https://github.com/jvassev/image2ipfs/)
 
 ## FAQ
 
@@ -370,15 +353,23 @@ For contributions please create a new branch and submit a pull request for revie
 
 _Many thanks to [@qiangli](https://github.com/qiangli) and all the [contributors](https://github.com/ipdr/ipdr/graphs/contributors) that made this package better._
 
-## Social
+### building the solution on windows
+TODO format
+```bash
+Start IPFS desktop
+Start Docker Desktop
+goreleaser release --snapshot --clean
+docker build -t example/helloworld .
+dist\ipdr_windows_amd64_v1\ipdr.exe push example/helloworld
+dist\ipdr_windows_amd64_v1\ipdr.exe pull /ipfs/bafybeidbsaf2oislyxxwa2c6tccpemioqrcxlx6ynnxkuq3qcrpwn7dzkq
+dist\ipdr_windows_amd64_v1\ipdr.exe server --tlsKeyPath certs/key.pem --tlsCertPath certs/cert.pem
+```
 
-- Discuss on [Discord](https://discord.gg/7GJwMjedjh)
+### Test
 
-## Resources
-
-- [Docker Registry HTTP API V2 Spec](https://docs.docker.com/registry/spec/api/)
-- [Docker Registry 2.0 (slidedeck)](https://www.slideshare.net/Docker/docker-48351569)
-- [image2ipfs](https://github.com/jvassev/image2ipfs/)
+```bash
+make test
+```
 
 ## License
 

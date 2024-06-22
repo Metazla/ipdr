@@ -78,7 +78,9 @@ func (r *registry) v2(resp http.ResponseWriter, req *http.Request) *regError {
 			Message: "We don't understand your method + url",
 		}
 	}
+	resp.Header().Set("Content-Type", "application/json") // Ensure the content type is set to application/json
 	resp.WriteHeader(200)
+	fmt.Fprintln(resp, "{}") // Send an empty JSON object
 	return nil
 }
 
