@@ -60,8 +60,6 @@ func (m *manifests) handle(resp http.ResponseWriter, req *http.Request) *regErro
 	target := elem[len(elem)-1]
 	target = strings.Replace(target, ":", "/", -1)
 	repo := strings.Join(elem[1:len(elem)-2], "/")
-	fmt.Sprintln("target : ", target)
-	fmt.Sprintln("repo : ", repo)
 
 	if req.Method == "GET" {
 		m.lock.Lock()

@@ -59,17 +59,35 @@ docker run -d -p 5000:5000 ipdr-server:latest
 3 - use the registry
 
 ```bash
+#standalone use with only IPFS Desktop
+
 # run the ipdr registry
 docker build -t example/helloworld .
 
-# push to IPFS (it will return the hash of the command)
+# push to IPFS (it will return the hash of the image)
 ipdr push example/helloworld
 
-# pull from IPFS
-docker pull localhost:5000/bafybeid6y5q37v5cb7vcxc4qkjutmgjssxddhc6fqfz4hajycjg2xtt43e
+# pull from IPFS (on another computer)
+ipdr pull bafybeidb5pvdpggchtwj2pacw7zyxf7wtwotktrw6dn3iqtpbdktlb4diy
 
 # run image pulled from IPFS
-docker run localhost:5000/bafybeid6y5q37v5cb7vcxc4qkjutmgjssxddhc6fqfz4hajycjg2xtt43e
+docker run example/helloworld
+```
+
+```bash
+#Use with the registry
+
+#run the registry
+describe that
+
+# run the ipdr registry
+docker build -t example/helloworld .
+
+# push to IPFS (it will return the hash of the image)
+ipdr push example/helloworld
+
+# run image pulled from IPFS
+docker run localhost:5000/bafybeidb5pvdpggchtwj2pacw7zyxf7wtwotktrw6dn3iqtpbdktlb4diy
 ```
 
 

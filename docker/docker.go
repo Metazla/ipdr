@@ -2,10 +2,12 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -186,6 +188,43 @@ func (c *Client) LoadImage(input io.Reader) error {
 	return err
 }
 
+// LoadImage loads an image from an IO reader
+func (c *Client) LoadImage2(input io.Reader) (string, error) {
+	output, err := c.client.ImageLoad(context.Background(), input, false)
+	if err != nil {
+		return "", err
+	}
+	defer output.Body.Close()
+
+	body, err := ioutil.ReadAll(output.Body)
+	if err != nil {
+		return "", err
+	}
+	c.Debugf("Response Body: %s", body)
+
+	var result struct {
+		Stream string `json:"stream"`
+	}
+
+	// Iterate over each line as the output may contain multiple JSON objects.
+	for _, line := range strings.Split(string(body), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+
+		// Attempt to unmarshal each line into the result struct.
+		if err := json.Unmarshal([]byte(line), &result); err == nil {
+			if strings.Contains(result.Stream, "Loaded image ID: sha256:") {
+				sha := strings.TrimPrefix(result.Stream, "Loaded image ID: sha256:")
+				sha = strings.TrimSpace(sha) // Clean up any extra whitespace or newline characters.
+				return sha, nil
+			}
+		}
+	}
+
+	return "", nil // Return an empty string if no SHA is found
+}
+
 // LoadImageByFilePath loads an image from a tarball
 func (c *Client) LoadImageByFilePath(filepath string) error {
 	input, err := os.Open(filepath)
@@ -194,6 +233,27 @@ func (c *Client) LoadImageByFilePath(filepath string) error {
 		return err
 	}
 	return c.LoadImage(input)
+}
+
+// LoadImageByFilePath loads an image from a tarball
+func (c *Client) LoadImageByFilePathV2(filepath string, tags []string) error {
+	input, err := os.Open(filepath)
+	if err != nil {
+		log.Errorf("[docker] open image by filepath error; %v", err)
+		return err
+	}
+	imageID, err := c.LoadImage2(input)
+	if err != nil {
+		log.Errorf("[docker] load image by filepath error; %v", err)
+		return err
+	}
+
+	for _, tag := range tags {
+		c.TagImage(imageID, tag)
+	}
+
+	log.Println("[docker] image id :", imageID)
+	return err
 }
 
 // SaveImageTar saves an image into a tarball

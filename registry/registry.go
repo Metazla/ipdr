@@ -78,18 +78,28 @@ func NewRegistry(config *Config) *Registry {
 
 // PushImageByID uploads Docker image by image ID, which is hash or repo tag, to IPFS
 func (r *Registry) PushImageByID(imageID string) (string, error) {
+	tmp, err := mktmp()
+	if err != nil {
+		return "", err
+	}
+
 	// normalize image ID
 	id, err := r.TagToImageID(imageID)
 	if err != nil {
 		return "", err
 	}
 
-	reader, err := r.dockerClient.ReadImage(id)
+	err = r.dockerClient.SaveImageTar(id, tmp+"image.tar")
 	if err != nil {
 		return "", err
 	}
 
-	return r.PushImage(reader, imageID)
+	file, err := os.Open(tmp + "image.tar")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	return r.PushImage(tmp, file, imageID)
 }
 
 // TagToImageID returns the image ID given a repo tag
@@ -114,13 +124,8 @@ func (r *Registry) TagToImageID(imageID string) (string, error) {
 }
 
 // PushImage uploads the Docker image to IPFS
-func (r *Registry) PushImage(reader io.Reader, imageID string) (string, error) {
-	tmp, err := mktmp()
-	if err != nil {
-		return "", err
-	}
+func (r *Registry) PushImage(tmp string, reader io.Reader, imageID string) (string, error) {
 
-	r.Debugf("[registry] temp: %s", tmp)
 	if err := untar(reader, tmp); err != nil {
 		return "", err
 	}
@@ -130,13 +135,12 @@ func (r *Registry) PushImage(reader io.Reader, imageID string) (string, error) {
 		return "", err
 	}
 
-	r.Debugf("[registry] root dir: %s", root)
 	imageIpfsHash, err := r.uploadDir(root, imageID)
 	if err != nil {
 		return "", err
 	}
 
-	r.Debugf("\n[registry] uploaded to /ipfs/%s\n", imageIpfsHash)
+	r.Debugf("[registry] uploaded to /ipfs/%s\n", imageIpfsHash)
 	r.Debugf("[registry] docker image %s\n", imageIpfsHash)
 
 	return imageIpfsHash, nil
@@ -149,7 +153,7 @@ func (r *Registry) DownloadImage(ipfsHash string) (string, error) {
 		return "", err
 	}
 
-	path := fmt.Sprintf("%s/%s.tar", tmp, ipfsHash)
+	path := fmt.Sprintf("%s/%s", tmp, ipfsHash)
 	err = r.ipfsClient.Get(ipfsHash, path)
 	if err != nil {
 		return "", err
@@ -160,17 +164,39 @@ func (r *Registry) DownloadImage(ipfsHash string) (string, error) {
 
 // PullImage pulls the Docker image from IPFS
 func (r *Registry) PullImage(ipfsHash string) (string, error) {
-	r.runServer()
-	dockerPullImageID := fmt.Sprintf("%s/%s", r.dockerLocalRegistryHost, ipfsHash)
-
-	r.Debugf("[registry] attempting to pull %s", dockerPullImageID)
-	err := r.dockerClient.PullImage(dockerPullImageID)
+	//TODO
+	// 1 - use IPFS to download the image into a temp file
+	path, err := r.DownloadImage(ipfsHash)
 	if err != nil {
-		log.Errorf("[registry] error pulling image %s; %v", dockerPullImageID, err)
+		log.Errorf("[registry] error DownloadImage; %v", err)
 		return "", err
 	}
 
-	return dockerPullImageID, nil
+	imageName, err := ioutil.ReadFile(path + "/imageName")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	r.Debugf("[registry] Downloaded folder of image %s", path)
+	// 2 - use tar the temp file
+	tarPath := filepath.Dir(path) + "/" + ipfsHash + ".tar"
+	file, err := os.Create(filepath.Dir(path) + "/" + ipfsHash + ".tar")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	tarFolder(path, file)
+
+	r.Debugf("[registry] tarball of image %s", tarPath)
+
+	// 3 - use docker load to load the tar
+	tags := []string{ipfsHash, string(imageName)}
+	err = r.dockerClient.LoadImageByFilePathV2(tarPath, tags)
+	if err != nil {
+		return "", err
+	}
+
+	return "ok", nil
 }
 
 // retag retags an image
@@ -211,14 +237,15 @@ func (r *Registry) runServer() {
 
 // ipfsPrep formats the image data into a registry compatible format
 func (r *Registry) ipfsPrep(tmp string, imageID string) (string, error) {
-	root, err := mktmp()
-	if err != nil {
-		return "", err
-	}
-
+	root := tmp
 	workdir := root
 	r.Debugf("[registry] preparing image in: %s", workdir)
-	name := "default"
+	name := ""
+
+	err := ioutil.WriteFile(root+"/imageName", []byte(imageID), 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// read human readable name of image
 	if _, err := os.Stat(tmp + "repositories"); err == nil {
@@ -263,9 +290,9 @@ func (r *Registry) ipfsPrep(tmp string, imageID string) (string, error) {
 	configDigest := "sha256:" + strings.Replace(configFile, "blobs/sha256/", "", -1)
 	configDigestPath := string(configFile[:len(configFile)-5])
 	configDest := filepath.Join(workdir, configDigestPath)
-	r.Debugf("\n[registry] dist: %s", configDest)
-	r.Debugf("\n[registry] configFile: %s", configFile)
-	r.Debugf("\n[registry] configDigest: %s", configDigest)
+	r.Debugf("[registry] dist: %s", configDest)
+	r.Debugf("[registry] configFile: %s", configFile)
+	r.Debugf("[registry] configDigest: %s", configDigest)
 
 	configFileDirPath := filepath.Dir(configDest)
 	if err := os.MkdirAll(configFileDirPath, 0755); err != nil {
@@ -330,31 +357,9 @@ func (r *Registry) uploadDir(root string, imageID string) (string, error) {
 	}
 
 	r.Debugf("[registry] upload hash %s", hash)
+	r.ipfsClient.ToMsf(root, imageID, hash)
 
-	// get the first ref, which contains the image data
-	refs, err := r.ipfsClient.Refs(hash, false)
-	if err != nil {
-		return "", err
-	}
-
-	var firstRef string
-	for i := 0; i < 10; i++ {
-		firstRef = <-refs
-
-		r.ipfsClient.ToMsf(root, imageID, firstRef)
-
-		if firstRef != "" {
-			return firstRef, nil
-		}
-	}
-
-	// return base hash if no refs
-	if firstRef == "" {
-		log.Fatal("NO REF")
-		return hash, nil
-	}
-
-	return "", errors.New("could not upload")
+	return hash, err
 }
 
 // mktmp creates a temporary directory
@@ -621,6 +626,63 @@ func untar(reader io.Reader, dst string) error {
 			}
 		}
 	}
+}
+
+// tarFolder tars a specified directory into an io.Writer
+func tarFolder(srcDir string, writer io.Writer) error {
+	tw := tar.NewWriter(writer)
+	defer tw.Close()
+
+	// Ensure the srcDir is in its absolute form and clean up the path
+	baseDir, err := filepath.Abs(srcDir)
+	if err != nil {
+		return err
+	}
+	baseDir = filepath.Clean(baseDir) + string(filepath.Separator)
+
+	// Walk through the directory and add each file and folder to the tarball
+	err = filepath.Walk(baseDir, func(file string, fi os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Remove the base directory from the file path to ensure it's relative to the root
+		relativePath := strings.TrimPrefix(file, baseDir)
+		if relativePath == "" { // Skip the root directory entry
+			return nil
+		}
+
+		// Create a header corresponding to the file or directory
+		header, err := tar.FileInfoHeader(fi, "")
+		if err != nil {
+			return err
+		}
+
+		header.Name = filepath.ToSlash(relativePath)
+
+		// Write the header
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		// If it's not a directory, write the file content
+		if !fi.IsDir() {
+			data, err := os.Open(file)
+			if err != nil {
+				return err
+			}
+			defer data.Close()
+
+			// Copy file data to tarball
+			if _, err := io.Copy(tw, data); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // readJSON reads a file into a map structure
