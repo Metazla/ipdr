@@ -131,7 +131,7 @@ func (r *Registry) PushImage(reader io.Reader, imageID string) (string, error) {
 	}
 
 	r.Debugf("[registry] root dir: %s", root)
-	imageIpfsHash, err := r.uploadDir(root)
+	imageIpfsHash, err := r.uploadDir(root, imageID)
 	if err != nil {
 		return "", err
 	}
@@ -260,11 +260,19 @@ func (r *Registry) ipfsPrep(tmp string, imageID string) (string, error) {
 		return "", errors.New("image archive must be produced by docker > 1.10")
 	}
 
-	configDigest := "sha256:" + string(configFile[:len(configFile)-5])
-	configDest := fmt.Sprintf("%s/blobs/%s", workdir, configDigest)
+	configDigest := "sha256:" + strings.Replace(configFile, "blobs/sha256/", "", -1)
+	configDigestPath := string(configFile[:len(configFile)-5])
+	configDest := filepath.Join(workdir, configDigestPath)
 	r.Debugf("\n[registry] dist: %s", configDest)
+	r.Debugf("\n[registry] configFile: %s", configFile)
+	r.Debugf("\n[registry] configDigest: %s", configDigest)
 
-	if err := copyFile(tmp+"/"+configFile, configDest); err != nil {
+	configFileDirPath := filepath.Dir(configDest)
+	if err := os.MkdirAll(configFileDirPath, 0755); err != nil {
+		return "", err
+	}
+
+	if err := copyFile(filepath.Join(tmp, configFile), configDest); err != nil {
 		return "", err
 	}
 
@@ -300,7 +308,12 @@ func (r *Registry) ipfsPrep(tmp string, imageID string) (string, error) {
 			return err
 		}
 		rd := sha256.Sum256(data)
-		return writeJSON(mf, workdir+"/manifests/sha256:"+hex.EncodeToString(rd[:]))
+		mdir := workdir + "/manifests/sha256/" + hex.EncodeToString(rd[:])
+		configFileDirPath = filepath.Dir(mdir)
+		if err := os.MkdirAll(configFileDirPath, 0755); err != nil {
+			return err
+		}
+		return writeJSON(mf, mdir)
 	}
 	if err := writeManifest(); err != nil {
 		return "", err
@@ -310,7 +323,7 @@ func (r *Registry) ipfsPrep(tmp string, imageID string) (string, error) {
 }
 
 // uploadDir uploads the directory to IPFS
-func (r *Registry) uploadDir(root string) (string, error) {
+func (r *Registry) uploadDir(root string, imageID string) (string, error) {
 	hash, err := r.ipfsClient.AddDir(root)
 	if err != nil {
 		return "", err
@@ -327,6 +340,8 @@ func (r *Registry) uploadDir(root string) (string, error) {
 	var firstRef string
 	for i := 0; i < 10; i++ {
 		firstRef = <-refs
+
+		r.ipfsClient.ToMsf(root, imageID, firstRef)
 
 		if firstRef != "" {
 			return firstRef, nil
@@ -496,7 +511,7 @@ func (r *Registry) compressLayer(path, blobDir string) (int64, string, error) {
 		return int64(0), "", err
 	}
 
-	err = renameFile(tmp, fmt.Sprintf("%s/sha256:%s", blobDir, digest))
+	err = renameFile(tmp, filepath.Join(blobDir, "sha256", digest))
 	if err != nil {
 		return int64(0), "", err
 	}

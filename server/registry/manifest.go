@@ -58,7 +58,10 @@ func (m *manifests) handle(resp http.ResponseWriter, req *http.Request) *regErro
 	elem := strings.Split(req.URL.Path, "/")
 	elem = elem[1:]
 	target := elem[len(elem)-1]
+	target = strings.Replace(target, ":", "/", -1)
 	repo := strings.Join(elem[1:len(elem)-2], "/")
+	fmt.Sprintln("target : ", target)
+	fmt.Sprintln("repo : ", repo)
 
 	if req.Method == "GET" {
 		m.lock.Lock()
@@ -68,7 +71,7 @@ func (m *manifests) handle(resp http.ResponseWriter, req *http.Request) *regErro
 		if err != nil {
 			return &regError{
 				Status:  http.StatusNotFound,
-				Code:    "MANIFEST_UNKNOWN",
+				Code:    "MANIFEST_UNKNOWN_1",
 				Message: err.Error(),
 			}
 		}
@@ -78,7 +81,7 @@ func (m *manifests) handle(resp http.ResponseWriter, req *http.Request) *regErro
 		if err != nil {
 			return &regError{
 				Status:  http.StatusNotFound,
-				Code:    "MANIFEST_UNKNOWN",
+				Code:    "MANIFEST_UNKNOWN_2",
 				Message: err.Error(),
 			}
 		}
@@ -105,7 +108,7 @@ func (m *manifests) handle(resp http.ResponseWriter, req *http.Request) *regErro
 		if err != nil {
 			return &regError{
 				Status:  http.StatusNotFound,
-				Code:    "MANIFEST_UNKNOWN",
+				Code:    "MANIFEST_UNKNOWN_3",
 				Message: err.Error(),
 			}
 		}

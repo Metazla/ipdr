@@ -66,10 +66,10 @@ docker build -t example/helloworld .
 ipdr push example/helloworld
 
 # pull from IPFS
-docker pull localhost:5000/bafybeihbc47tfnglajwmjvhnh6msqdolvfzyxrrgdcjuuhv4lqai2apvv4
+docker pull localhost:5000/bafybeid6y5q37v5cb7vcxc4qkjutmgjssxddhc6fqfz4hajycjg2xtt43e
 
 # run image pulled from IPFS
-docker run localhost:5000/bafybeihbc47tfnglajwmjvhnh6msqdolvfzyxrrgdcjuuhv4lqai2apvv4
+docker run localhost:5000/bafybeid6y5q37v5cb7vcxc4qkjutmgjssxddhc6fqfz4hajycjg2xtt43e
 ```
 
 

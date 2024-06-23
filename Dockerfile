@@ -20,8 +20,7 @@ RUN wget https://dist.ipfs.tech/kubo/${KUBO_VERSION}/kubo_${KUBO_VERSION}_linux-
 
 RUN ipfs init
 
-# Expose the IPFS ports
-EXPOSE 4001 5001 8080
+
 
 RUN apt update && apt install -y tar
 
@@ -32,9 +31,9 @@ RUN tar zxvf ./*.tar.gz
 RUN chmod +x ./ipdr
 RUN mv ./ipdr /usr/local/bin/ipdr
 
-EXPOSE 5000
-EXPOSE 4001
 ENV DOMAIN www.domain.com
+# Expose the IPFS ports
+EXPOSE 5000 4001 5001 8080
 
 # Set the entrypoint to the ipfs command
 #ENTRYPOINT ["ipfs"]

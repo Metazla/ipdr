@@ -75,6 +75,7 @@ func (b *blobs) handle(resp http.ResponseWriter, req *http.Request) *regError {
 		}
 	}
 	target := elem[len(elem)-1]
+	target = strings.Replace(target, ":", "/", -1)
 	service := elem[len(elem)-2]
 	digest := req.URL.Query().Get("digest")
 	contentRange := req.Header.Get("Content-Range")

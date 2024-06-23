@@ -8,9 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -94,52 +92,22 @@ func (client *Client) List(path string) ([]*api.LsLink, error) {
 // AddDir adds a directory to IPFS
 // https://github.com/ipfs/go-ipfs-api/blob/master/add.go#L99-L145
 func (client *Client) AddDir(dir string) (string, error) {
-	stat, err := os.Lstat(dir)
+	s := client.client
+	final, err := s.AddDir(dir, api.CidVersion(1))
 	if err != nil {
-		return "", err
+		return final, err
 	}
 
-	sf, err := files.NewSerialFile(dir, false, stat)
-	if err != nil {
-		return "", err
-	}
-	slf := files.NewSliceDirectory([]files.DirEntry{files.FileEntry(filepath.Base(dir), sf)})
-	reader := files.NewMultiFileReader(slf, true)
+	return final, err
+}
 
-	resp, err := client.client.Request("add").
-		Option("recursive", true).
-		Option("cid-version", 1).
-		Body(reader).
-		Send(context.Background())
-	if err != nil {
-		return "", nil
-	}
-
-	defer resp.Close()
-
-	if resp.Error != nil {
-		return "", resp.Error
-	}
-
-	dec := json.NewDecoder(resp.Output)
-	var final string
-	for {
-		var out object
-		err = dec.Decode(&out)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return "", err
-		}
-		final = out.Hash
-	}
-
-	if final == "" {
-		return "", errors.New("no results received")
-	}
-
-	return final, nil
+func (client *Client) ToMsf(dir string, imageID string, ref string) {
+	// Add to MFS (so user ca pin and manage them) ignore err
+	mfsPath := "/ipdr/" + imageID
+	fmt.Println("creating mfs folder: ", mfsPath)
+	client.client.FilesMkdir(context.Background(), mfsPath, api.FilesCp.Parents(true))
+	client.client.FilesCp(context.Background(), "/ipfs/"+ref, mfsPath+"/"+ref)
+	client.client.Pin(dir)
 }
 
 // Refs returns the refs of an IPFS hash
