@@ -375,15 +375,27 @@ For contributions please create a new branch and submit a pull request for revie
 
 _Many thanks to [@qiangli](https://github.com/qiangli) and all the [contributors](https://github.com/ipdr/ipdr/graphs/contributors) that made this package better._
 
-### building the solution on windows
-TODO format
-```bash
-Start IPFS desktop
-Start Docker Desktop
-goreleaser release --snapshot --clean
-docker build -t example/helloworld .
-dist\ipdr_windows_amd64_v1\ipdr.exe push example/helloworld
-```
+To improve the clarity and formatting of the build instructions for Windows, consider adding a structured, step-by-step format with explanations for each step. Here's a more organized version:
+
+### Building the Solution on Windows
+
+Follow these steps to dev on the solution the solution using Docker and IPFS on a Windows machine.
+
+1. **Start IPFS Desktop:**
+   - Launch IPFS Desktop to ensure the IPFS daemon is running.
+
+2. **Start Docker Desktop:**
+   - Open Docker Desktop to have Docker ready for building and pushing images.
+
+3. **Create a Release Snapshot with GoReleaser:**
+   - Run the following command to create a release snapshot. This cleans up any previous builds to avoid conflicts.
+     ```bash
+     goreleaser release --snapshot --clean
+     docker build -t example/helloworld .
+     dist\ipdr_windows_amd64_v1\ipdr.exe push example/helloworld
+     ```
+
+Ensure that each tool required (IPFS Desktop, Docker Desktop, GoReleaser, IPDR) is installed on your system before starting the build process.
 
 ### Test
 
