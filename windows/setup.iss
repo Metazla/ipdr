@@ -11,18 +11,19 @@ AppVersion=1.0
 AppPublisher=IPDR
 DefaultDirName={userpf}\IPDR
 DefaultGroupName=IPDR
-OutputDir=.
+OutputDir=.\dist
 OutputBaseFilename=IPDR_Installer
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=lowest
+SetupIconFile=ipdr_logo.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 ; Remember to update this path to the actual binary location
-Source: "dist\ipdr_windows_amd64_v1\ipdr.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\ipdr_windows_amd64_v1\ipdr.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "info.txt"; DestDir: "{app}"; Flags: isreadme
 Source: "update_path.ps1"; DestDir: "{app}"; Flags: ignoreversion
 

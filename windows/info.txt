@@ -1,8 +1,5 @@
 To use open a terminal and run the following command:
 
-The command-line interface for the InterPlanetary Docker Registry.
-More info: https://github.com/ipdr/ipdr
-
 Usage:
   ipdr [flags]
   ipdr [command]

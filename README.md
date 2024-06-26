@@ -36,89 +36,93 @@ High-level overview:
 - [Resources](#resources)
 - [License](#license)
 
-## Getting started
 
-There is 2 ways of using IPDR
-- [using the local registry](#ipdr-regitry-container)
-- [using the IPDR client with an IPFS node](#ipdr-regitry-container)
+## Getting Started
 
-## IPDR regitry container
-The registry is composed of an IPFS node and the IPDR registry
+IPDR can be used in two main ways:
 
-1 - download the latest docker image 
-option 1 download image from github
-option 2 from ipfs directly and rename it with .tar
-ipfshash and image download in https://github.com/worph/ipdr/releases
+1. **Using the Local Registry Container:** This method involves setting up IPDR registry. The IPDR registry contains the IPDR server and an IPFS node
+2. **Using the IPDR Client with an IPFS Node:** This standalone method requires only an IPFS Desktop Node and the IPDR client.
 
-2 - start the registry
+## Using IPDR with an IPFS Node
+
+This setup allows you to use IPDR directly with an existing IPFS node, enabling Docker image management through IPFS without a full registry setup.
+
+### Installation
+
+Install the IPDR client on your system to interact with IPFS directly:
+
+#### For Linux:
+```bash
+# Download the latest release binaries
+wget https://github.com/Metazla/ipdr/releases/download/x.x.x/ipdr_x.x.x_linux_amd64.tar.gz
+tar -xvzf ipdr_x.x.x_linux_amd64.tar.gz
+sudo mv ipdr /usr/local/bin/ipdr
+
+# Check installation
+ipdr --help
+```
+
+#### For Windows:
+Download the executable from [IPDR Releases](https://github.com/Metazla/ipdr/releases) and add it to your system path.
+
+#### Using Go:
+If you have Go installed, you can install directly using:
+```bash
+go get -u github.com/Metazla/ipdr/cmd/ipdr
+```
+
+### Usage
+
+With IPDR installed, and the IPFS node running (must listen on the 5000 port API) you can push and pull Docker images to and from IPFS. Here’s how you can use the IPDR client:
+
+```bash
+# Build a Docker image
+docker build -t example/helloworld .
+
+# Push the image to IPFS and get the IPFS hash
+ipdr push example/helloworld
+
+# On another machine, pull the image from IPFS using the hash
+ipdr pull bafybeidb5pvdpggchtwj2pacw7zyxf7wtwotktrw6dn3iqtpbdktlb4diy
+
+# Run the Docker image
+docker run example/helloworld
+```
+
+## Setting Up the IPDR Registry Container
+
+The IPDR registry container integrates an IPFS node with the Docker registry capabilities provided by IPDR, facilitating a seamless Docker image management experience.
+
+### Installation
+
+1. **Download the latest Docker image:**
+   - From GitHub: Navigate to [IPDR Releases](https://github.com/Metazla/ipdr/releases) and download the appropriate image file.
+   - Directly from IPFS: Download using the IPFS hash provided in the releases page and rename the file to `file.tar`.
+
+2. **Load and start the registry:**
 ```bash
 docker load --input file.tar
 docker run -d -p 5000:5000 ipdr-server:latest
 ```
 
-3 - use the registry
+### Usage
+
+Once the registry is running, you can tag, push, and pull images:
 
 ```bash
-#standalone use with only IPFS Desktop
+# Tag your Docker image
+docker tag example/helloworld localhost:5000/example/helloworld
 
-# run the ipdr registry
-docker build -t example/helloworld .
+# Push the image to IPFS via the IPDR registry
+docker push localhost:5000/example/helloworld
 
-# push to IPFS (it will return the hash of the image)
-ipdr push example/helloworld
+# Pull the image to IPFS via the IPDR registry
+docker pull localhost:5000/example/helloworld
 
-# pull from IPFS (on another computer)
-ipdr pull bafybeidb5pvdpggchtwj2pacw7zyxf7wtwotktrw6dn3iqtpbdktlb4diy
-
-# run image pulled from IPFS
-docker run example/helloworld
+# Pull and run the image from IPFS via your registry
+docker run localhost:5000/example/helloworld
 ```
-
-```bash
-#Use with the registry
-
-#run the registry
-describe that
-
-# run the ipdr registry
-docker build -t example/helloworld .
-
-# push to IPFS (it will return the hash of the image)
-ipdr push example/helloworld
-
-# run image pulled from IPFS
-docker run localhost:5000/bafybeidb5pvdpggchtwj2pacw7zyxf7wtwotktrw6dn3iqtpbdktlb4diy
-```
-
-
-## IPDR client Install (Optional)
-
-If you don't want to use the registry and use the IPDR client directly with IPFS desktop you can intall the client
-
-### linux
-- Install from [release binaries](https://github.com/worph/ipdr/releases)
-    ```bash
-    # replace x.x.x with the latest version
-    wget https://github.com/ipdr/ipdr/releases/download/x.x.x/ipdr_x.x.x_linux_amd64.tar.gz
-    tar -xvzf ipdr_x.x.x_linux_amd64.tar.gz ipdr
-    ./ipdr --help
-
-    # move to bin path
-    sudo mv ipdr /usr/local/bin/ipdr
-    ```
-### windows
-
-    ```bash
-    Download the exe from https://github.com/worph/ipdr/releases
-    ```
-
-### go
-
-- Install with [Go](https://golang.org/doc/install):
-
-    ```bash
-    go get -u github.com/ipdr/ipdr/cmd/ipdr
-    ```
 
 ## CLI
 
@@ -379,8 +383,6 @@ Start Docker Desktop
 goreleaser release --snapshot --clean
 docker build -t example/helloworld .
 dist\ipdr_windows_amd64_v1\ipdr.exe push example/helloworld
-dist\ipdr_windows_amd64_v1\ipdr.exe pull /ipfs/bafybeidbsaf2oislyxxwa2c6tccpemioqrcxlx6ynnxkuq3qcrpwn7dzkq
-dist\ipdr_windows_amd64_v1\ipdr.exe server --tlsKeyPath certs/key.pem --tlsCertPath certs/cert.pem
 ```
 
 ### Test
