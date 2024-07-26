@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -24,6 +25,43 @@ var (
 	// ErrInvalidConvertFormat is error for when convert format is invalid
 	ErrInvalidConvertFormat = errors.New("convert format must be either \"docker\" or \"ipfs\"")
 )
+
+// Define the structure of the IPFSHost configuration file.
+type IPFSHostConfig struct {
+	Host    string `json:"host"`
+	Gateway string `json:"gateway"`
+	// Add other necessary fields here
+}
+
+// Function to read and unmarshal the .ipdr file
+func loadIPFSHostConfig() (*IPFSHostConfig, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, errors.New("failed to get current working directory")
+	}
+
+	filePath := filepath.Join(cwd, ".ipdr")
+	fileData, err := os.ReadFile(filePath)
+	if os.IsNotExist(err) {
+		// Return a default configuration if the .ipdr file does not exist
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errors.New("failed to read .ipdr file")
+	}
+
+	var config IPFSHostConfig
+	err = json.Unmarshal(fileData, &config)
+	if err != nil {
+		return nil, errors.New("failed to unmarshal .ipdr file")
+	}
+
+	fmt.Printf("Loaded IPFS host configuration from %s\n", filePath)
+	fmt.Printf("Host: %s\n", config.Host)
+	fmt.Printf("Gateway: %s\n", config.Gateway)
+
+	return &config, nil
+}
 
 func main() {
 	if os.Getenv("DEBUG") != "" {
@@ -67,6 +105,17 @@ More info: https://github.com/ipdr/ipdr`,
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ipfsConfig, err := loadIPFSHostConfig()
+			if err != nil {
+				return err
+			}
+
+			// Use default values if the configuration is nil
+			if ipfsConfig != nil {
+				ipfsHost = ipfsConfig.Host
+				ipfsGateway = ipfsConfig.Gateway
+			}
+
 			reg := registry.NewRegistry(&registry.Config{
 				DockerLocalRegistryHost: dockerRegistryHost,
 				IPFSHost:                ipfsHost,
@@ -109,6 +158,17 @@ More info: https://github.com/ipdr/ipdr`,
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ipfsConfig, err := loadIPFSHostConfig()
+			if err != nil {
+				return err
+			}
+
+			// Use default values if the configuration is nil
+			if ipfsConfig != nil {
+				ipfsHost = ipfsConfig.Host
+				ipfsGateway = ipfsConfig.Gateway
+			}
+
 			reg := registry.NewRegistry(&registry.Config{
 				DockerLocalRegistryHost: dockerRegistryHost,
 				IPFSHost:                ipfsHost,

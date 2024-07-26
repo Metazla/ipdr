@@ -1,0 +1,5 @@
+{
+  "registry": "ipdr",
+  "image": "ipdr-server",
+  "version": "1.0.0"
+}

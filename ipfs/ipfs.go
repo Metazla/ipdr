@@ -102,11 +102,21 @@ func (client *Client) AddDir(dir string) (string, error) {
 }
 
 func (client *Client) ToMsf(dir string, imageID string, ref string) {
+	// Test if imageID contains a ":"
+	if !strings.Contains(imageID, ":") {
+		// Append ":latest" if ":" is not found
+		imageID += ":latest"
+	}
+
+	// Replace ':' with '/' in imageID (manage tags as folders)
+	imageID = strings.ReplaceAll(imageID, ":", "/")
+
 	// Add to MFS (so user ca pin and manage them) ignore err
 	mfsPath := "/ipdr/" + imageID
 	fmt.Println("creating mfs folder: ", mfsPath)
 	client.client.FilesMkdir(context.Background(), mfsPath, api.FilesCp.Parents(true))
-	client.client.FilesCp(context.Background(), "/ipfs/"+ref, mfsPath+"/"+ref)
+	client.client.FilesRm(context.Background(), mfsPath, true)
+	client.client.FilesCp(context.Background(), "/ipfs/"+ref, mfsPath)
 	client.client.Pin(dir)
 }
 
