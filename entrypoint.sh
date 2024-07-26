@@ -12,6 +12,24 @@ else
     ipfs config Addresses.Gateway /ip4/0.0.0.0/tcp/8080
 fi
 
+# Retrieve and parse the BOOTSTRAP environment variable
+if [ -n "$BOOTSTRAP" ]; then
+    IFS=',' read -r -a bootstrap_addresses <<< "$BOOTSTRAP"
+    for address in "${bootstrap_addresses[@]}"; do
+        address=$(echo "$address" | xargs)  # Trim any leading/trailing whitespace
+        if [ -n "$address" ]; then
+            ipfs bootstrap add "$address"
+            if [ $? -eq 0 ]; then
+                echo "[ipfs] Successfully added bootstrap address $address"
+            else
+                echo "[ipfs] Failed to add bootstrap address $address"
+            fi
+        fi
+    done
+else
+    echo "[ipfs] BOOTSTRAP environment variable is not set. Skipping bootstrap registration."
+fi
+
 # Start ipfs and ipdr in the background
 ipfs daemon &> ipfs.log &
 ipdr server &> ipdr.log &

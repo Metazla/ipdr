@@ -32,7 +32,8 @@ try {
 
     # Run the Docker container
     Write-Host "Running the Docker container..."
-    docker run -d -p 5000:5000 -p 4001:4001 -p 8080:8080 -p 5001:5001 --name $containerName $imageName
+    #docker run -d -p 5000:5000 -p 4001:4001 -p 8080:8080 -p 5001:5001 --name $containerName $imageName
+    docker run -d -p 5000:5000 -e BOOTSTRAP=/dns4/ipfs.metadata.box/tcp/443/wss/p2p/12D3KooWLgrGC22HbjWKfAUJ2xpRt6vXzCtuajsjih1FWYzeSjyG --name $containerName $imageName
 
     if ($LASTEXITCODE -ne 0) {
         throw "Docker run failed. Exiting."
